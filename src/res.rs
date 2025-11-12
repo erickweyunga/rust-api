@@ -90,6 +90,27 @@ impl Res {
     pub fn status_code(&self) -> StatusCode {
         self.inner.status()
     }
+
+    /// Add header to response.
+    pub fn with_header(mut self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
+        if let (Ok(name), Ok(value)) = (
+            header::HeaderName::from_bytes(name.as_ref().as_bytes()),
+            header::HeaderValue::from_str(value.as_ref()),
+        ) {
+            self.inner.headers_mut().insert(name, value);
+        }
+        self
+    }
+
+    /// Get mutable access to headers.
+    pub fn headers_mut(&mut self) -> &mut header::HeaderMap {
+        self.inner.headers_mut()
+    }
+
+    /// Get read-only access to headers.
+    pub fn headers(&self) -> &header::HeaderMap {
+        self.inner.headers()
+    }
 }
 
 impl Default for Res {
