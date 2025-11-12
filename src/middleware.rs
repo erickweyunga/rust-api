@@ -23,6 +23,7 @@ type BoxFuture<T> = std::pin::Pin<Box<dyn Future<Output = T> + Send>>;
 
 impl<S: 'static> Next<S> {
     /// Create next handler.
+    #[inline]
     pub fn new(
         handler: Arc<dyn Fn(Req, Arc<S>) -> BoxFuture<Res> + Send + Sync>,
         state: Arc<S>,
@@ -31,6 +32,7 @@ impl<S: 'static> Next<S> {
     }
 
     /// Pass request to next middleware or handler.
+    #[inline]
     pub async fn run(self, req: Req) -> Res {
         (self.handler)(req, self.state).await
     }

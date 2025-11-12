@@ -3,9 +3,6 @@ use rust_api_cors::{Cors, CorsConfig};
 
 #[tokio::main]
 async fn main() {
-    println!("CORS Middleware Demo");
-    println!("====================\n");
-
     // Example 1: Permissive CORS (allows all origins)
     let permissive_cors = Cors::permissive();
 
@@ -62,27 +59,6 @@ async fn main() {
             }))
         })
         .get("/health", |_req: Req| async { Res::text("OK") });
-
-    println!("Server running on http://127.0.0.1:3040\n");
-    println!("Test CORS with these requests:\n");
-
-    println!("1. Preflight request (OPTIONS):");
-    println!("   curl -i -X OPTIONS http://127.0.0.1:3040/api/users \\");
-    println!("        -H 'Origin: http://localhost:3000' \\");
-    println!("        -H 'Access-Control-Request-Method: POST'\n");
-
-    println!("2. GET request with Origin:");
-    println!("   curl -i http://127.0.0.1:3040/api/users \\");
-    println!("        -H 'Origin: http://localhost:3000'\n");
-
-    println!("3. POST request with Origin:");
-    println!("   curl -i -X POST http://127.0.0.1:3040/api/users \\");
-    println!("        -H 'Origin: http://localhost:3000' \\");
-    println!("        -H 'Content-Type: application/json' \\");
-    println!("        -d '{{\"name\":\"Alice\"}}'\n");
-
-    println!("4. Request without Origin (no CORS headers):");
-    println!("   curl -i http://127.0.0.1:3040/\n");
 
     app.listen(([127, 0, 0, 1], 3040)).await.unwrap();
 }

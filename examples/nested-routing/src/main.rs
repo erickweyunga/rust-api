@@ -62,7 +62,6 @@ async fn main() {
         .nest("/api/v1", api_v1)
         .nest("/api/v2", api_v2);
 
-    println!("Listening on http://127.0.0.1:3002");
     app.listen(([127, 0, 0, 1], 3002))
         .await
         .expect("Failed to start server");

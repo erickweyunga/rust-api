@@ -12,6 +12,7 @@ pub struct Res {
 
 impl Res {
     /// Create response with status 200 OK.
+    #[inline]
     pub fn new() -> Self {
         Self {
             inner: Response::new(Full::new(Bytes::new())),
@@ -19,11 +20,13 @@ impl Res {
     }
 
     /// Create from hyper response.
+    #[inline]
     pub fn from_hyper(inner: Response<Full<Bytes>>) -> Self {
         Self { inner }
     }
 
     /// Convert to hyper response.
+    #[inline]
     pub fn into_hyper(self) -> Response<Full<Bytes>> {
         self.inner
     }
@@ -92,6 +95,7 @@ impl Res {
     }
 
     /// Add header to response.
+    #[inline]
     pub fn with_header(mut self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
         if let (Ok(name), Ok(value)) = (
             header::HeaderName::from_bytes(name.as_ref().as_bytes()),
@@ -103,11 +107,13 @@ impl Res {
     }
 
     /// Get mutable access to headers.
+    #[inline]
     pub fn headers_mut(&mut self) -> &mut header::HeaderMap {
         self.inner.headers_mut()
     }
 
     /// Get read-only access to headers.
+    #[inline]
     pub fn headers(&self) -> &header::HeaderMap {
         self.inner.headers()
     }

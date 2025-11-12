@@ -51,7 +51,6 @@ async fn main() {
         .get("/", home)
         .get("/count", count);
 
-    println!("Listening on http://127.0.0.1:3001");
     app.listen(([127, 0, 0, 1], 3001))
         .await
         .expect("Failed to start server");

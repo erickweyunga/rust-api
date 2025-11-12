@@ -3,9 +3,6 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    println!("Per-Route Middleware Example");
-    println!("=============================\n");
-
     let app = RustApi::new()
         // Global middleware - runs on ALL routes
         .layer(|req, _state, next| async move {

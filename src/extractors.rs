@@ -71,7 +71,7 @@ where
             ));
         }
 
-        let body = req.body();
+        let body = req.body().await?;
         let value = serde_urlencoded::from_bytes::<T>(body.as_ref())
             .map_err(|e| Error::unprocessable(format!("Invalid form data: {}", e)))?;
 
@@ -101,7 +101,7 @@ where
             return Err(Error::bad_request("Content-Type must be application/json"));
         }
 
-        let body = req.body();
+        let body = req.body().await?;
         let value = serde_json::from_slice(body)
             .map_err(|e| Error::bad_request(format!("Invalid JSON: {}", e)))?;
 
@@ -157,6 +157,7 @@ where
     S: Send + Sync + 'static,
 {
     async fn from_request(req: &mut Req, _state: &Arc<S>) -> Result<Self> {
-        Ok(BodyBytes(req.body().clone()))
+        let body = req.body().await?;
+        Ok(BodyBytes(body.clone()))
     }
 }

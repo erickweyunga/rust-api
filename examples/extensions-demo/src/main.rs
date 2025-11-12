@@ -1,6 +1,5 @@
 use rust_api::prelude::*;
 
-// Custom types to store in extensions
 #[derive(Clone, Debug)]
 struct User {
     id: u64,

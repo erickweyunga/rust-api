@@ -222,14 +222,6 @@ impl<S: Send + Sync + 'static> RustApi<S> {
         let path = req.uri().path().to_string();
         let mut rust_req = Req::from_hyper(req);
 
-        rust_req = match rust_req.consume_body().await {
-            Ok(r) => r,
-            Err(e) => {
-                use crate::IntoRes;
-                return Ok(e.into_res().into_hyper());
-            }
-        };
-
         let response = match &self.router {
             Some(router) => match router.at(&path) {
                 Ok(matched) => {

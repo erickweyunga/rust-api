@@ -37,7 +37,5 @@ async fn main() {
             ))
         });
 
-    println!("Starting server on http://127.0.0.1:3005");
-    println!("Visit http://127.0.0.1:3005/ to test middleware with state");
     app.listen(([127, 0, 0, 1], 3005)).await.unwrap();
 }

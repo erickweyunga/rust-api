@@ -3,7 +3,6 @@ use rust_api::MiddlewareChain;
 use rust_api::prelude::*;
 use std::sync::Arc;
 
-// Example middleware implementations
 struct LoggerMiddleware;
 
 #[async_trait]

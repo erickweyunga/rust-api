@@ -15,7 +15,6 @@ async fn greet(_req: Req) -> Res {
 async fn main() {
     let app = RustApi::new().get("/", hello).get("/greet", greet);
 
-    println!("Listening on http://127.0.0.1:3000");
     app.listen(([127, 0, 0, 1], 3000))
         .await
         .expect("Failed to start server");

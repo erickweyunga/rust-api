@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-rust-api = { path = "../../../../" }
-rust-api-cors = { path = "../.." }
+rust-api = { path = "../../" }
+rust-api-cors = { path = "../../rust-api-middleware/cors" }
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
