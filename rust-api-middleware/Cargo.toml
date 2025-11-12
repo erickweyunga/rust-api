@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "cors",
-    "cors/examples/cors-demo",
+    "error-handlers",
+    "helpers",
 ]
 resolver = "2"

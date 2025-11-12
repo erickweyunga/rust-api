@@ -1,0 +1,13 @@
+[package]
+name = "rust-api-helpers"
+version = "0.0.1"
+edition = "2024"
+authors = ["Eric Kweyunga <maverickweyunga@gmail.com>"]
+description = "Middleware helpers for Rust API framework"
+license = "MIT"
+repository = "https://github.com/erickweyunga/rust-api"
+keywords = ["web", "framework", "middleware", "http"]
+
+[dependencies]
+rust-api = { path = "../../" }
+async-trait = "0.1"

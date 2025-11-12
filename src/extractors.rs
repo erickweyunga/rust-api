@@ -1,4 +1,4 @@
-//! Type-safe request data extraction.
+//! Request extractors for type-safe data extraction.
 
 use crate::{Error, Req, Result};
 use async_trait::async_trait;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// Extract data from incoming requests.
 #[async_trait]
 pub trait FromRequest<S = ()>: Sized {
-    /// Extract from request.
+    /// Extract data from request.
     async fn from_request(req: &mut Req, state: &Arc<S>) -> Result<Self>;
 }
 
@@ -48,8 +48,6 @@ where
 }
 
 /// Extract form data from request body.
-///
-/// Requires `Content-Type: application/x-www-form-urlencoded`.
 pub struct Form<T>(pub T);
 
 #[async_trait]
@@ -80,8 +78,6 @@ where
 }
 
 /// Extract JSON from request body.
-///
-/// Requires `Content-Type: application/json`.
 pub struct Json<T>(pub T);
 
 #[async_trait]
@@ -110,9 +106,6 @@ where
 }
 
 /// Extract path parameters.
-///
-/// Path parameters are always strings and must be deserialized accordingly.
-/// Use `String` fields in the target struct.
 pub struct Path<T>(pub T);
 
 #[async_trait]

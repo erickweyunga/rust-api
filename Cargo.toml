@@ -43,8 +43,8 @@ http-body-util = "0.1"
 # Routing
 matchit = "0.9"
 
-# Serialization (for extractors)
-serde = { version = "1", features = ["derive"] }
+# Extractors and JSON
+serde = "1"
 serde_json = "1"
 serde_urlencoded = "0.7"
 
