@@ -40,7 +40,7 @@ async fn main() {
         .get("/api", api_info);
 
     println!("Listening on http://127.0.0.1:3004");
-    println!("Note: Full file streaming with tokio-util coming soon");
+    println!("Note: Full file streaming coming in future version");
     app.listen(([127, 0, 0, 1], 3004))
         .await
         .expect("Failed to start server");

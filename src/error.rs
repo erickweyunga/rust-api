@@ -17,7 +17,7 @@ pub enum Error {
     /// JSON serialization/deserialization error
     Json(serde_json::Error),
 
-    /// Hyper HTTP error
+    /// HTTP protocol error
     Hyper(hyper::Error),
 
     /// IO error

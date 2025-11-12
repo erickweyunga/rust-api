@@ -2,8 +2,6 @@
 //!
 //! Fast and scalable web framework for Rust.
 //!
-//! Built on Hyper and Tokio with an intuitive, Express-inspired API.
-//!
 //! ## Example
 //!
 //! ```rust,no_run
@@ -25,11 +23,12 @@
 //!
 //! ## Features
 //!
-//! - Fast async runtime built on Hyper and Tokio
+//! - Fast async runtime with HTTP/1 and HTTP/2 support
 //! - Intuitive routing with nested routers
 //! - Type-safe state management
 //! - Composable middleware
 //! - Zero-cost abstractions
+//! - Configurable request body size limits
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]

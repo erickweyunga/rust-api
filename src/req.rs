@@ -22,7 +22,7 @@ pub struct Req {
 }
 
 impl Req {
-    /// Create from hyper request
+    /// Create from HTTP request
     pub fn from_hyper(inner: Request<Incoming>) -> Self {
         Self {
             inner,
@@ -107,7 +107,7 @@ impl Req {
             .unwrap_or(false)
     }
 
-    /// Convert to hyper request
+    /// Convert to underlying HTTP request
     pub fn into_hyper(self) -> Request<Incoming> {
         self.inner
     }

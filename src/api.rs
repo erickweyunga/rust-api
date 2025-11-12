@@ -61,12 +61,12 @@ impl<S: Send + Sync + 'static> RustApi<S> {
 
     /// Set maximum request body size in bytes
     ///
-    /// Default is 64KB. Set to larger value for file uploads.
+    /// Default is 64KB. Increase for file uploads or large payloads.
     ///
     /// # Example
     /// ```ignore
     /// let app = RustApi::new()
-    ///     .max_body_size(10 * 1024 * 1024); // 10MB for file uploads
+    ///     .max_body_size(10 * 1024 * 1024); // 10MB
     /// ```
     pub fn max_body_size(mut self, size: u64) -> Self {
         self.max_body_size = size;
