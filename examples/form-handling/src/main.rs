@@ -89,7 +89,7 @@ async fn search(Query(params): Query<SearchParams>) -> Res {
 
 async fn create_user(Json(user): Json<CreateUser>) -> Res {
     if user.age < 18 {
-        return Res::builder().status(400).json(&ApiResponse {
+        return Res::json(&ApiResponse {
             success: false,
             message: "User must be at least 18 years old".to_string(),
             data: None,
@@ -111,14 +111,12 @@ async fn create_user(Json(user): Json<CreateUser>) -> Res {
 #[tokio::main]
 async fn main() {
     let app = RustApi::new()
-        .max_body_size(1024 * 1024) // 1MB for forms and JSON
         .get("/", home)
         .post("/submit", submit)
         .get("/search", search)
         .post("/api/users", create_user);
 
     println!("Listening on http://127.0.0.1:3003");
-    println!("Max body size: 1MB");
     println!("");
     println!("Examples:");
     println!("  - GET  http://127.0.0.1:3003/");

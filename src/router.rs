@@ -80,7 +80,7 @@ impl<S: Send + Sync + 'static> Router<S> {
     /// Add middleware layer
     pub fn layer<F, Fut>(mut self, middleware: F) -> Self
     where
-        F: Fn(crate::Req, crate::Next<S>) -> Fut + Send + Sync + 'static,
+        F: Fn(crate::Req, Arc<S>, crate::Next<S>) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = crate::Res> + Send + 'static,
     {
         self.middlewares.push(Arc::new(FnMiddleware(middleware)));

@@ -180,43 +180,6 @@ impl ResBuilder {
 
         Res { inner: res }
     }
-
-    /// Build JSON response
-    pub fn json<T: Serialize>(self, value: &T) -> Res {
-        match serde_json::to_vec(value) {
-            Ok(bytes) => {
-                let mut res = Response::new(Full::new(Bytes::from(bytes)));
-                *res.status_mut() = self.status;
-
-                let has_content_type = self
-                    .headers
-                    .iter()
-                    .any(|(name, _)| name == header::CONTENT_TYPE);
-                if !has_content_type {
-                    res.headers_mut().insert(
-                        header::CONTENT_TYPE,
-                        header::HeaderValue::from_static("application/json"),
-                    );
-                }
-
-                for (name, value) in self.headers {
-                    res.headers_mut().insert(name, value);
-                }
-
-                Res { inner: res }
-            }
-            Err(e) => {
-                let error_msg = format!(r#"{{"error": "JSON serialization failed: {}"}}"#, e);
-                let mut res = Response::new(Full::new(Bytes::from(error_msg)));
-                *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                res.headers_mut().insert(
-                    header::CONTENT_TYPE,
-                    header::HeaderValue::from_static("application/json"),
-                );
-                Res { inner: res }
-            }
-        }
-    }
 }
 
 impl Default for ResBuilder {

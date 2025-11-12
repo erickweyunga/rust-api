@@ -18,15 +18,15 @@ pub trait Middleware<S = ()>: Send + Sync + 'static {
 
 /// Continue to next middleware or handler
 pub struct Next<S = ()> {
-    handler: Arc<dyn Fn(Req, Arc<S>) -> BoxFuture<Res> + Send + Sync>,
-    state: Arc<S>,
+    pub(crate) handler: Arc<dyn Fn(Req, Arc<S>) -> BoxFuture<Res> + Send + Sync>,
+    pub(crate) state: Arc<S>,
 }
 
 type BoxFuture<T> = std::pin::Pin<Box<dyn Future<Output = T> + Send>>;
 
 impl<S: 'static> Next<S> {
     /// Create new Next
-    pub(crate) fn new(
+    pub fn new(
         handler: Arc<dyn Fn(Req, Arc<S>) -> BoxFuture<Res> + Send + Sync>,
         state: Arc<S>,
     ) -> Self {
@@ -45,11 +45,11 @@ pub struct FnMiddleware<F>(pub F);
 #[async_trait]
 impl<F, Fut, S> Middleware<S> for FnMiddleware<F>
 where
-    F: Fn(Req, Next<S>) -> Fut + Send + Sync + 'static,
+    F: Fn(Req, Arc<S>, Next<S>) -> Fut + Send + Sync + 'static,
     Fut: Future<Output = Res> + Send + 'static,
     S: Send + Sync + 'static,
 {
-    async fn handle(&self, req: Req, _state: Arc<S>, next: Next<S>) -> Res {
-        (self.0)(req, next).await
+    async fn handle(&self, req: Req, state: Arc<S>, next: Next<S>) -> Res {
+        (self.0)(req, state, next).await
     }
 }

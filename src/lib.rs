@@ -14,7 +14,7 @@
 //!             Res::text("Hello, world!")
 //!         })
 //!         .get("/health", |_req: Req| async {
-//!             Res::json(&serde_json::json!({"status": "healthy"}))
+//!             Res::text("OK")
 //!         });
 //!
 //!     app.listen(([127, 0, 0, 1], 3000)).await.unwrap();
@@ -40,6 +40,7 @@ mod handler;
 mod into_res;
 pub mod layers;
 mod middleware;
+mod middleware_helpers;
 mod req;
 mod res;
 mod router;
@@ -47,15 +48,17 @@ mod router;
 // Re-exports
 pub use api::RustApi;
 pub use error::{Error, Result};
+pub use extractors::{Form, FromRequest, Json, Path, Query, State};
 pub use handler::{FnHandler, FnHandler1, FnHandler2, FnHandler3, Handler};
 pub use into_res::IntoRes;
 pub use middleware::{Middleware, Next};
+pub use middleware_helpers::{CombinedMiddleware, ConditionalMiddleware, MiddlewareChain};
 pub use req::Req;
 pub use res::{Res, ResBuilder};
 pub use router::Router;
 
 /// Prelude module for convenient imports
 pub mod prelude {
-    pub use crate::extractors::{Form, Json, Path, Query, State};
+    pub use crate::extractors::{Form, FromRequest, Json, Path, Query, State};
     pub use crate::{Error, Handler, IntoRes, Middleware, Next, Req, Res, Result, Router, RustApi};
 }

@@ -18,7 +18,7 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
 use crate::{
-    Error, Handler, IntoRes, Middleware, Req, Result, Router, handler::IntoHandler,
+    Error, Handler, IntoRes, Middleware, Req, Res, Result, Router, handler::IntoHandler,
     middleware::FnMiddleware,
 };
 
@@ -31,7 +31,6 @@ pub struct RustApi<S = ()> {
     middlewares: Vec<BoxedMiddleware<S>>,
     state: Option<Arc<S>>,
     router: Option<matchit::Router<(BoxedHandler<S>, Vec<BoxedMiddleware<S>>)>>,
-    max_body_size: u64,
 }
 
 impl RustApi<()> {
@@ -42,7 +41,6 @@ impl RustApi<()> {
             middlewares: Vec::new(),
             state: Some(Arc::new(())),
             router: None,
-            max_body_size: 64 * 1024, // 64KB default
         }
     }
 }
@@ -55,28 +53,13 @@ impl<S: Send + Sync + 'static> RustApi<S> {
             middlewares: Vec::new(),
             state: Some(Arc::new(state)),
             router: None,
-            max_body_size: 64 * 1024, // 64KB default
         }
-    }
-
-    /// Set maximum request body size in bytes
-    ///
-    /// Default is 64KB. Increase for file uploads or large payloads.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let app = RustApi::new()
-    ///     .max_body_size(10 * 1024 * 1024); // 10MB
-    /// ```
-    pub fn max_body_size(mut self, size: u64) -> Self {
-        self.max_body_size = size;
-        self
     }
 
     /// Add global middleware
     pub fn layer<F, Fut>(mut self, middleware: F) -> Self
     where
-        F: Fn(Req, crate::Next<S>) -> Fut + Send + Sync + 'static,
+        F: Fn(Req, Arc<S>, crate::Next<S>) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = crate::Res> + Send + 'static,
     {
         self.middlewares.push(Arc::new(FnMiddleware(middleware)));
@@ -208,7 +191,7 @@ impl<S: Send + Sync + 'static> RustApi<S> {
 
         let mut rust_req = Req::from_hyper(req);
 
-        rust_req = match rust_req.consume_body(self.max_body_size).await {
+        rust_req = match rust_req.consume_body().await {
             Ok(r) => r,
             Err(e) => {
                 use crate::IntoRes;
@@ -225,7 +208,7 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                     }
                     rust_req.set_path_params(params);
 
-                    let (handler, _middlewares) = matched.value;
+                    let (handler, middlewares) = matched.value;
                     let state = match &self.state {
                         Some(s) => Arc::clone(s),
                         None => {
@@ -235,7 +218,50 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                         }
                     };
 
-                    handler.call(rust_req, state).await
+                    // Apply middleware chain
+                    if middlewares.is_empty() {
+                        handler.call(rust_req, state).await
+                    } else {
+                        // Build middleware chain from innermost (handler) to outermost
+                        let handler_clone = Arc::clone(handler);
+                        // let state_clone = Arc::clone(&state);
+
+                        // Start with the handler as the innermost function
+                        let mut next_fn: Arc<
+                            dyn Fn(
+                                    Req,
+                                    Arc<S>,
+                                ) -> std::pin::Pin<
+                                    Box<dyn std::future::Future<Output = Res> + Send>,
+                                > + Send
+                                + Sync,
+                        > = Arc::new(move |req, state| {
+                            let handler = Arc::clone(&handler_clone);
+                            Box::pin(async move { handler.call(req, state).await })
+                        });
+
+                        // Wrap each middleware around the chain (in reverse order)
+                        for middleware in middlewares.iter().rev() {
+                            let middleware_clone = Arc::clone(middleware);
+                            let inner = Arc::clone(&next_fn);
+                            let state_for_middleware = Arc::clone(&state);
+
+                            next_fn = Arc::new(move |req, _state| {
+                                let mw = Arc::clone(&middleware_clone);
+                                let inner_clone = Arc::clone(&inner);
+                                let state_clone = Arc::clone(&state_for_middleware);
+
+                                Box::pin(async move {
+                                    let next =
+                                        crate::Next::new(inner_clone, Arc::clone(&state_clone));
+                                    mw.handle(req, state_clone, next).await
+                                })
+                            });
+                        }
+
+                        // Execute the middleware chain
+                        next_fn(rust_req, state).await
+                    }
                 }
                 Err(_) => {
                     use crate::IntoRes;
@@ -262,7 +288,6 @@ where
             middlewares: Vec::new(),
             state: None,
             router: None,
-            max_body_size: 64 * 1024, // 64KB default
         }
     }
 }

@@ -5,11 +5,7 @@
 
 use bytes::Bytes;
 use http_body_util::BodyExt;
-use hyper::{
-    Method, Request, Uri,
-    body::{Body, Incoming},
-    header,
-};
+use hyper::{Method, Request, Uri, body::Incoming, header};
 use std::collections::HashMap;
 
 use crate::{Error, Result};
@@ -79,12 +75,12 @@ impl Req {
     }
 
     /// Get path parameters (used by extractors)
-    pub(crate) fn path_params(&self) -> &HashMap<String, String> {
+    pub fn path_params(&self) -> &HashMap<String, String> {
         &self.path_params
     }
 
     /// Get the body bytes (used by extractors)
-    pub(crate) fn body(&self) -> &Bytes {
+    pub fn body(&self) -> &Bytes {
         self.body_bytes.as_ref().unwrap_or(&EMPTY_BYTES)
     }
 
@@ -99,12 +95,6 @@ impl Req {
         Err(Error::Custom(
             "Body already consumed or not available".to_string(),
         ))
-    }
-
-    /// Parse body as JSON
-    pub async fn json<T: serde::de::DeserializeOwned>(&mut self) -> Result<T> {
-        let bytes = self.body_bytes().await?;
-        Ok(serde_json::from_slice(&bytes)?)
     }
 
     /// Get the content type
@@ -124,17 +114,8 @@ impl Req {
         self.inner
     }
 
-    pub(crate) async fn consume_body(mut self, max_body_size: u64) -> Result<Self> {
+    pub(crate) async fn consume_body(mut self) -> Result<Self> {
         let body = self.inner.body_mut();
-
-        // Check body size hint for protection
-        let max = body.size_hint().upper().unwrap_or(u64::MAX);
-        if max > max_body_size {
-            return Err(Error::payload_too_large(format!(
-                "Request body too large (max: {} bytes)",
-                max_body_size
-            )));
-        }
 
         let collected = body
             .collect()

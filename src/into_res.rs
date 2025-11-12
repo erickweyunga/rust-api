@@ -4,7 +4,6 @@
 //! that are automatically converted to HTTP responses.
 
 use crate::{Error, Res};
-use serde::Serialize;
 
 /// Types that can become HTTP responses
 pub trait IntoRes {
@@ -48,39 +47,19 @@ impl<T: IntoRes> IntoRes for Result<T, Error> {
 impl IntoRes for Error {
     fn into_res(self) -> Res {
         match self {
-            Error::Status(code, Some(msg)) => {
-                Res::builder().status(code).json(&serde_json::json!({
-                    "error": msg,
-                    "status": code
-                }))
-            }
+            Error::Status(code, Some(msg)) => Res::builder()
+                .status(code)
+                .text(format!("Error {}: {}", code, msg)),
             Error::Status(code, None) => Res::status(code),
-            Error::Json(e) => Res::builder().status(400).json(&serde_json::json!({
-                "error": format!("JSON error: {}", e),
-                "status": 400
-            })),
-            Error::Hyper(e) => Res::builder().status(500).json(&serde_json::json!({
-                "error": format!("HTTP error: {}", e),
-                "status": 500
-            })),
-            Error::Io(e) => Res::builder().status(500).json(&serde_json::json!({
-                "error": format!("IO error: {}", e),
-                "status": 500
-            })),
-            Error::Custom(msg) => Res::builder().status(500).json(&serde_json::json!({
-                "error": msg,
-                "status": 500
-            })),
+            Error::Json(e) => Res::builder()
+                .status(400)
+                .text(format!("JSON error: {}", e)),
+            Error::Hyper(e) => Res::builder()
+                .status(500)
+                .text(format!("HTTP error: {}", e)),
+            Error::Io(e) => Res::builder().status(500).text(format!("IO error: {}", e)),
+            Error::Custom(msg) => Res::builder().status(500).text(msg),
         }
-    }
-}
-
-/// Wrapper for JSON responses
-pub struct Json<T>(pub T);
-
-impl<T: Serialize> IntoRes for Json<T> {
-    fn into_res(self) -> Res {
-        Res::json(&self.0)
     }
 }
 

@@ -15,7 +15,7 @@ pub enum Error {
     Status(u16, Option<String>),
 
     /// JSON serialization/deserialization error
-    Json(serde_json::Error),
+    Json(String),
 
     /// HTTP protocol error
     Hyper(hyper::Error),
@@ -83,12 +83,6 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Error::Json(err)
-    }
-}
 
 impl From<hyper::Error> for Error {
     fn from(err: hyper::Error) -> Self {

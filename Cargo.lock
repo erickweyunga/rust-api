@@ -302,6 +302,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
+name = "middleware-composition"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "rust-api",
+ "tokio",
+]
+
+[[package]]
+name = "middleware-test"
+version = "0.0.1"
+dependencies = [
+ "rust-api",
+ "tokio",
+]
+
+[[package]]
 name = "mio"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -317,7 +334,6 @@ name = "nested-routing"
 version = "0.0.1"
 dependencies = [
  "rust-api",
- "serde",
  "serde_json",
  "tokio",
 ]
@@ -403,7 +419,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytes",
- "form_urlencoded",
  "futures-util",
  "http-body-util",
  "hyper",

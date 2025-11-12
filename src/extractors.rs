@@ -1,30 +1,16 @@
-//! Request extractors
+//! Type-safe extractors for request data
 //!
-//! Extractors provide type-safe extraction of data from requests.
-//! They implement the [`FromRequest`] trait.
-//!
-//! # Example
-//!
-//! ```ignore
-//! use rust_api::prelude::*;
-//! use serde::Deserialize;
-//!
-//! #[derive(Deserialize)]
-//! struct Params {
-//!     name: String,
-//!     age: u32,
-//! }
-//!
-//! async fn handler(Query(params): Query<Params>) -> Res {
-//!     Res::text(format!("Hello {}, age {}", params.name, params.age))
-//! }
-//! ```
+//! This module provides extractors for common request data types:
+//! - `Query<T>` - URL query parameters
+//! - `Form<T>` - Form data
+//! - `Json<T>` - JSON body
+//! - `Path<T>` - Path parameters
+//! - `State<S>` - Application state
 
+use crate::{Error, Req, Result};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-
-use crate::{Error, Req, Result};
 
 /// Extract data from request
 #[async_trait]
@@ -33,7 +19,22 @@ pub trait FromRequest<S = ()>: Sized {
     async fn from_request(req: &mut Req, state: &Arc<S>) -> Result<Self>;
 }
 
+/// Extract application state
+pub struct State<S>(pub S);
+
+#[async_trait]
+impl<S> FromRequest<S> for State<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    async fn from_request(_req: &mut Req, state: &Arc<S>) -> Result<Self> {
+        Ok(State((**state).clone()))
+    }
+}
+
 /// Extract query parameters from URL
+///
+/// Deserializes URL query string into a type using serde_urlencoded.
 ///
 /// # Example
 ///
@@ -45,7 +46,7 @@ pub trait FromRequest<S = ()>: Sized {
 /// }
 ///
 /// async fn search(Query(params): Query<SearchParams>) -> Res {
-///     // Use params.q and params.page
+///     // params.q and params.page are available
 /// }
 /// ```
 pub struct Query<T>(pub T);
@@ -83,7 +84,7 @@ where
 /// }
 ///
 /// async fn login(Form(form): Form<LoginForm>) -> Res {
-///     // Use form.username and form.password
+///     // form.username and form.password available
 /// }
 /// ```
 pub struct Form<T>(pub T);
@@ -129,7 +130,7 @@ where
 /// }
 ///
 /// async fn create(Json(user): Json<CreateUser>) -> Res {
-///     // Use user.name and user.email
+///     // user.name and user.email available
 /// }
 /// ```
 pub struct Json<T>(pub T);
@@ -170,7 +171,7 @@ where
 /// }
 ///
 /// async fn get_user(Path(params): Path<UserPath>) -> Res {
-///     // Use params.id
+///     // params.id available
 /// }
 /// ```
 pub struct Path<T>(pub T);
@@ -184,30 +185,11 @@ where
     async fn from_request(req: &mut Req, _state: &Arc<S>) -> Result<Self> {
         let params = req.path_params();
 
-        let value = serde_json::from_value(serde_json::to_value(params)?)
-            .map_err(|e| Error::bad_request(format!("Invalid path parameters: {}", e)))?;
+        let value = serde_json::from_value(
+            serde_json::to_value(params).map_err(|e| Error::Json(e.to_string()))?,
+        )
+        .map_err(|e| Error::bad_request(format!("Invalid path parameters: {}", e)))?;
 
         Ok(Path(value))
-    }
-}
-
-/// Extract application state
-///
-/// # Example
-///
-/// ```ignore
-/// async fn handler(State(db): State<Database>) -> Res {
-///     // Use db
-/// }
-/// ```
-pub struct State<S>(pub S);
-
-#[async_trait]
-impl<S> FromRequest<S> for State<S>
-where
-    S: Clone + Send + Sync + 'static,
-{
-    async fn from_request(_req: &mut Req, state: &Arc<S>) -> Result<Self> {
-        Ok(State((**state).clone()))
     }
 }
