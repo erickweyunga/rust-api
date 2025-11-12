@@ -185,11 +185,65 @@ where
     async fn from_request(req: &mut Req, _state: &Arc<S>) -> Result<Self> {
         let params = req.path_params();
 
-        let value = serde_json::from_value(
-            serde_json::to_value(params).map_err(|e| Error::Json(e.to_string()))?,
-        )
-        .map_err(|e| Error::bad_request(format!("Invalid path parameters: {}", e)))?;
+        // Serialize to JSON string then deserialize - serde_json can't auto-convert string to int
+        // So the user must use String fields or implement custom deserializer
+        let json_str = serde_json::to_string(params).map_err(|e| {
+            Error::bad_request(format!("Failed to serialize path parameters: {}", e))
+        })?;
+
+        let value = serde_json::from_str::<T>(&json_str)
+            .map_err(|e| Error::bad_request(format!("Invalid path parameters: {}. Note: path parameters are strings, use String type or implement custom deserializer for type conversion", e)))?;
 
         Ok(Path(value))
+    }
+}
+
+/// Extract request headers
+///
+/// Provides access to all HTTP headers in the request.
+///
+/// # Example
+///
+/// ```ignore
+/// async fn handler(Headers(headers): Headers) -> Res {
+///     if let Some(auth) = headers.get("authorization") {
+///         // Process authorization header
+///     }
+///     Res::text("OK")
+/// }
+/// ```
+pub struct Headers(pub hyper::HeaderMap);
+
+#[async_trait]
+impl<S> FromRequest<S> for Headers
+where
+    S: Send + Sync + 'static,
+{
+    async fn from_request(req: &mut Req, _state: &Arc<S>) -> Result<Self> {
+        Ok(Headers(req.headers().clone()))
+    }
+}
+
+/// Extract raw body bytes
+///
+/// Provides direct access to the request body as bytes without any parsing.
+///
+/// # Example
+///
+/// ```ignore
+/// async fn upload(BodyBytes(data): BodyBytes) -> Res {
+///     // data contains raw bytes
+///     Res::text(format!("Received {} bytes", data.len()))
+/// }
+/// ```
+pub struct BodyBytes(pub bytes::Bytes);
+
+#[async_trait]
+impl<S> FromRequest<S> for BodyBytes
+where
+    S: Send + Sync + 'static,
+{
+    async fn from_request(req: &mut Req, _state: &Arc<S>) -> Result<Self> {
+        Ok(BodyBytes(req.body().clone()))
     }
 }

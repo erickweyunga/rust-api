@@ -66,6 +66,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "extractors-demo"
+version = "0.0.1"
+dependencies = [
+ "rust-api",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "file-serving"
 version = "0.0.1"
 dependencies = [

@@ -11,6 +11,7 @@ members = [
     "examples/extensions-demo",
     "examples/error-handlers",
     "examples/per-route-middleware",
+    "examples/extractors-demo",
 ]
 resolver = "2"
 
