@@ -3,10 +3,12 @@ name = "rust-api-client"
 version = "0.0.1"
 edition = "2024"
 authors = ["Eric Kweyunga <maverickweyunga@gmail.com>"]
-description = "HTTP client for Rust API framework"
+description = "HTTP client for Rust API"
 license = "MIT"
 repository = "https://github.com/erickweyunga/rust-api"
 keywords = ["web", "http", "client", "hyper"]
+categories = ["web-programming"]
+readme = "README.md"
 
 [dependencies]
 hyper = { version = "1", features = ["client", "http1"] }

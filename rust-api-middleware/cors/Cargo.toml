@@ -3,11 +3,12 @@ name = "rust-api-cors"
 version = "0.0.1"
 edition = "2024"
 authors = ["Eric Kweyunga <maverickweyunga@gmail.com>"]
-description = "CORS middleware for Rust Api framework"
+description = "CORS middleware for Rust API"
 license = "MIT"
 repository = "https://github.com/erickweyunga/rust-api"
 keywords = ["web", "cors", "middleware", "http"]
 categories = ["web-programming"]
+readme = "README.md"
 
 [dependencies]
 rust-api = { path = "../../" }
