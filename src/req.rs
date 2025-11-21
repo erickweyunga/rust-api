@@ -18,6 +18,7 @@ pub struct Req {
     incoming: Option<Incoming>,
     path_params: HashMap<String, String>,
     extensions: Extensions,
+    body_limit: Option<usize>,
 }
 
 impl Req {
@@ -33,7 +34,13 @@ impl Req {
             incoming: Some(body),
             path_params: HashMap::new(),
             extensions: Extensions::new(),
+            body_limit: None,
         }
+    }
+
+    /// Set body size limit.
+    pub(crate) fn set_body_limit(&mut self, limit: Option<usize>) {
+        self.body_limit = limit;
     }
 
     /// Get HTTP method.
@@ -105,12 +112,41 @@ impl Req {
                     .take()
                     .ok_or_else(|| Error::internal("Request body already consumed"))?;
 
+                // Check Content-Length header against limit
+                if let Some(limit) = self.body_limit {
+                    if let Some(content_length) = self.headers.get(header::CONTENT_LENGTH) {
+                        if let Ok(length_str) = content_length.to_str() {
+                            if let Ok(length) = length_str.parse::<usize>() {
+                                if length > limit {
+                                    return Err(Error::payload_too_large(&format!(
+                                        "Request body size {} exceeds limit of {}",
+                                        length, limit
+                                    )));
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let collected = incoming
                     .collect()
                     .await
                     .map_err(|e| Error::Custom(format!("Failed to read body: {}", e)))?;
 
-                Ok(collected.to_bytes())
+                let body_bytes = collected.to_bytes();
+
+                // Check actual body size against limit
+                if let Some(limit) = self.body_limit {
+                    if body_bytes.len() > limit {
+                        return Err(Error::payload_too_large(&format!(
+                            "Request body size {} exceeds limit of {}",
+                            body_bytes.len(),
+                            limit
+                        )));
+                    }
+                }
+
+                Ok(body_bytes)
             })
             .await
     }

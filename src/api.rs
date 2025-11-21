@@ -4,12 +4,13 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use bytes::Bytes;
 use http_body_util::Full;
 use hyper::body::Incoming;
-use hyper::server::conn::http1;
+use hyper::server::conn::{http1, http2};
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
@@ -275,6 +276,8 @@ impl<S: Send + Sync + 'static> RustApi<S> {
         let app = Arc::new(self);
         let listener = TcpListener::bind(addr).await?;
 
+        let active_connections = Arc::new(AtomicUsize::new(0));
+
         let (shutdown_tx, mut shutdown_rx) = watch::channel(false);
 
         tokio::spawn(async move {
@@ -287,31 +290,71 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                 result = listener.accept() => {
                     match result {
                         Ok((stream, _)) => {
+                            // Check max connections limit
+                            if let Some(max) = app.max_connections {
+                                let current = active_connections.load(Ordering::Relaxed);
+                                if current >= max {
+                                    drop(stream);
+                                    continue;
+                                }
+                            }
+
+                            // Increment active connections
+                            active_connections.fetch_add(1, Ordering::Relaxed);
+
                             let io = TokioIo::new(stream);
                             let app = Arc::clone(&app);
                             let mut shutdown_rx = shutdown_rx.clone();
+                            let active_connections = Arc::clone(&active_connections);
+                            let http2_enabled = app.http2_enabled;
 
                             tokio::task::spawn(async move {
-                                let conn = http1::Builder::new()
-                                    .serve_connection(
-                                        io,
-                                        service_fn(move |req| {
-                                            let app = Arc::clone(&app);
-                                            async move { app.handle_request(req).await }
-                                        }),
-                                    );
+                                if http2_enabled {
+                                    let conn = http2::Builder::new(hyper_util::rt::TokioExecutor::new())
+                                        .serve_connection(
+                                            io,
+                                            service_fn(move |req| {
+                                                let app = Arc::clone(&app);
+                                                async move { app.handle_request(req).await }
+                                            }),
+                                        );
 
-                                let mut conn = std::pin::pin!(conn);
+                                    let mut conn = std::pin::pin!(conn);
 
-                                tokio::select! {
-                                    result = conn.as_mut() => {
-                                        let _ = result;
+                                    tokio::select! {
+                                        result = conn.as_mut() => {
+                                            let _ = result;
+                                        }
+                                        _ = shutdown_rx.changed() => {
+                                            conn.as_mut().graceful_shutdown();
+                                            let _ = conn.await;
+                                        }
                                     }
-                                    _ = shutdown_rx.changed() => {
-                                        conn.as_mut().graceful_shutdown();
-                                        let _ = conn.await;
+                                } else {
+                                    let conn = http1::Builder::new()
+                                        .serve_connection(
+                                            io,
+                                            service_fn(move |req| {
+                                                let app = Arc::clone(&app);
+                                                async move { app.handle_request(req).await }
+                                            }),
+                                        );
+
+                                    let mut conn = std::pin::pin!(conn);
+
+                                    tokio::select! {
+                                        result = conn.as_mut() => {
+                                            let _ = result;
+                                        }
+                                        _ = shutdown_rx.changed() => {
+                                            conn.as_mut().graceful_shutdown();
+                                            let _ = conn.await;
+                                        }
                                     }
                                 }
+
+                                // Decrement active connections when done
+                                active_connections.fetch_sub(1, Ordering::Relaxed);
                             });
                         }
                         Err(_) => {}
@@ -333,6 +376,9 @@ impl<S: Send + Sync + 'static> RustApi<S> {
         let path = req.uri().path().to_string();
         let method = req.method().clone();
         let mut rust_req = Req::from_hyper(req);
+
+        // Set body limit if configured
+        rust_req.set_body_limit(self.body_limit);
 
         let response = match &self.router {
             Some(router) => match router.at(&path) {
@@ -360,8 +406,9 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                                 }
                             };
 
-                            if middlewares.is_empty() {
-                                handler.call(rust_req, state).await
+                            // Execute handler with optional timeout
+                            let handler_future = if middlewares.is_empty() {
+                                Box::pin(handler.call(rust_req, state))
                             } else {
                                 let handler_clone = Arc::clone(handler);
                                 let mut next_fn: Arc<
@@ -398,7 +445,24 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                                     });
                                 }
 
-                                next_fn(rust_req, state).await
+                                Box::pin(next_fn(rust_req, state))
+                            };
+
+                            // Apply handler timeout if configured
+                            if let Some(timeout) = self.handler_timeout {
+                                match tokio::time::timeout(timeout, handler_future).await {
+                                    Ok(res) => res,
+                                    Err(_) => {
+                                        use crate::IntoRes;
+                                        Error::Custom(format!(
+                                            "Handler timeout after {:?}",
+                                            timeout
+                                        ))
+                                        .into_res()
+                                    }
+                                }
+                            } else {
+                                handler_future.await
                             }
                         }
                         None => {
