@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "."
-]
+, "examples/websocket-echo"]
 resolver = "2"
 
 [package]
@@ -49,6 +49,14 @@ bytes = "1"
 async-trait = "0.1"
 uuid = { version = "1", features = ["v4"] }
 paste = "1"
+
+# WebSocket support (optional)
+sha1 = { version = "0.10", optional = true }
+base64 = { version = "0.22", optional = true }
+
+[features]
+default = []
+websocket = ["sha1", "base64"]
 
 [dev-dependencies]
 anyhow = "1"

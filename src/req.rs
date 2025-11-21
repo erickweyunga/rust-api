@@ -9,6 +9,9 @@ use tokio::sync::OnceCell;
 use crate::extensions::Extensions;
 use crate::{Error, Result};
 
+#[cfg(feature = "websocket")]
+use hyper::upgrade::OnUpgrade;
+
 /// HTTP request.
 pub struct Req {
     method: Method,
@@ -19,11 +22,16 @@ pub struct Req {
     path_params: HashMap<String, String>,
     extensions: Extensions,
     body_limit: Option<usize>,
+    #[cfg(feature = "websocket")]
+    upgrade: Option<OnUpgrade>,
 }
 
 impl Req {
     /// Create from hyper request.
-    pub fn from_hyper(req: Request<Incoming>) -> Self {
+    pub fn from_hyper(mut req: Request<Incoming>) -> Self {
+        #[cfg(feature = "websocket")]
+        let upgrade = Some(hyper::upgrade::on(&mut req));
+
         let (parts, body) = req.into_parts();
 
         Self {
@@ -35,7 +43,15 @@ impl Req {
             path_params: HashMap::new(),
             extensions: Extensions::new(),
             body_limit: None,
+            #[cfg(feature = "websocket")]
+            upgrade,
         }
+    }
+
+    /// Take the upgrade future (for WebSocket).
+    #[cfg(feature = "websocket")]
+    pub(crate) fn take_upgrade(&mut self) -> Option<OnUpgrade> {
+        self.upgrade.take()
     }
 
     /// Set body size limit.
@@ -180,5 +196,30 @@ impl Req {
     #[inline]
     pub(crate) fn set_path_params(&mut self, params: HashMap<String, String>) {
         self.path_params = params;
+    }
+
+    /// Check if request is WebSocket upgrade (GET with upgrade headers).
+    #[cfg(feature = "websocket")]
+    pub fn is_websocket_upgrade(&self) -> bool {
+        self.method() == Method::GET
+            && self
+                .header("upgrade")
+                .map(|v| v.eq_ignore_ascii_case("websocket"))
+                .unwrap_or(false)
+            && self
+                .header("connection")
+                .map(|v| v.to_lowercase().contains("upgrade"))
+                .unwrap_or(false)
+            && self
+                .header("sec-websocket-version")
+                .map(|v| v == "13")
+                .unwrap_or(false)
+            && self.header("sec-websocket-key").is_some()
+    }
+
+    /// Get Sec-WebSocket-Key header value.
+    #[cfg(feature = "websocket")]
+    pub fn websocket_key(&self) -> Option<&str> {
+        self.header("sec-websocket-key")
     }
 }

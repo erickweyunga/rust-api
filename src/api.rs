@@ -338,7 +338,8 @@ impl<S: Send + Sync + 'static> RustApi<S> {
                                                 let app = Arc::clone(&app);
                                                 async move { app.handle_request(req).await }
                                             }),
-                                        );
+                                        )
+                                        .with_upgrades();
 
                                     let mut conn = std::pin::pin!(conn);
 
@@ -379,6 +380,10 @@ impl<S: Send + Sync + 'static> RustApi<S> {
 
         // Set body limit if configured
         rust_req.set_body_limit(self.body_limit);
+
+        // Extract upgrade future before rust_req is moved
+        #[cfg(feature = "websocket")]
+        let on_upgrade = rust_req.take_upgrade();
 
         let response = match &self.router {
             Some(router) => match router.at(&path) {
@@ -498,6 +503,29 @@ impl<S: Send + Sync + 'static> RustApi<S> {
             }
         };
 
+        // Check for WebSocket upgrade
+        #[cfg(feature = "websocket")]
+        {
+            let mut response_mut = response;
+            if let Some(ws_callback) = response_mut.take_ws_callback() {
+                if let Some(upgrade_future) = on_upgrade {
+                    tokio::task::spawn(async move {
+                        match upgrade_future.await {
+                            Ok(upgraded) => {
+                                let ws = crate::websocket::WebSocket::new(upgraded);
+                                ws_callback(ws).await;
+                            }
+                            Err(_e) => {
+                                // Upgrade failed
+                            }
+                        }
+                    });
+                }
+            }
+            return Ok(response_mut.into_hyper());
+        }
+
+        #[cfg(not(feature = "websocket"))]
         Ok(response.into_hyper())
     }
 }

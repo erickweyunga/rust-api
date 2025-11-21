@@ -5,6 +5,11 @@ use http_body_util::Full;
 use hyper::{Response, StatusCode, header};
 use serde::Serialize;
 
+#[cfg(feature = "websocket")]
+use base64::{Engine as _, engine::general_purpose};
+#[cfg(feature = "websocket")]
+use sha1::{Digest, Sha1};
+
 static CONTENT_TYPE_TEXT: header::HeaderValue =
     header::HeaderValue::from_static("text/plain; charset=utf-8");
 static CONTENT_TYPE_HTML: header::HeaderValue =
@@ -15,6 +20,8 @@ static CONTENT_TYPE_JSON: header::HeaderValue =
 /// HTTP response.
 pub struct Res {
     inner: Response<Full<Bytes>>,
+    #[cfg(feature = "websocket")]
+    ws_callback: Option<crate::websocket::WebSocketHandler>,
 }
 
 impl Res {
@@ -23,13 +30,19 @@ impl Res {
     pub fn new() -> Self {
         Self {
             inner: Response::new(Full::new(Bytes::new())),
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
         }
     }
 
     /// Wrap hyper response.
     #[inline]
     pub fn from_hyper(inner: Response<Full<Bytes>>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// Unwrap to hyper response.
@@ -38,13 +51,24 @@ impl Res {
         self.inner
     }
 
+    /// Get WebSocket callback if present.
+    #[cfg(feature = "websocket")]
+    #[inline]
+    pub(crate) fn take_ws_callback(&mut self) -> Option<crate::websocket::WebSocketHandler> {
+        self.ws_callback.take()
+    }
+
     /// Text response.
     pub fn text(body: impl Into<String>) -> Self {
         let body_str = body.into();
         let mut res = Response::new(Full::new(Bytes::from(body_str)));
         res.headers_mut()
             .insert(header::CONTENT_TYPE, CONTENT_TYPE_TEXT.clone());
-        Self { inner: res }
+        Self {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// HTML response.
@@ -53,7 +77,11 @@ impl Res {
         let mut res = Response::new(Full::new(Bytes::from(body_str)));
         res.headers_mut()
             .insert(header::CONTENT_TYPE, CONTENT_TYPE_HTML.clone());
-        Self { inner: res }
+        Self {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// JSON response (serializes to Vec<u8> directly).
@@ -63,7 +91,11 @@ impl Res {
                 let mut res = Response::new(Full::new(Bytes::from(bytes)));
                 res.headers_mut()
                     .insert(header::CONTENT_TYPE, CONTENT_TYPE_JSON.clone());
-                Self { inner: res }
+                Self {
+                    inner: res,
+                    #[cfg(feature = "websocket")]
+                    ws_callback: None,
+                }
             }
             Err(e) => {
                 let error_msg = format!(r#"{{"error": "JSON serialization failed: {}"}}"#, e);
@@ -71,7 +103,11 @@ impl Res {
                 *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                 res.headers_mut()
                     .insert(header::CONTENT_TYPE, CONTENT_TYPE_JSON.clone());
-                Self { inner: res }
+                Self {
+                    inner: res,
+                    #[cfg(feature = "websocket")]
+                    ws_callback: None,
+                }
             }
         }
     }
@@ -80,12 +116,60 @@ impl Res {
     pub fn status(code: u16) -> Self {
         let mut res = Response::new(Full::new(Bytes::new()));
         *res.status_mut() = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-        Self { inner: res }
+        Self {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// Create builder.
     pub fn builder() -> ResBuilder {
         ResBuilder::new()
+    }
+
+    /// Create WebSocket upgrade response with handler callback.
+    ///
+    /// Returns 101 Switching Protocols with proper Sec-WebSocket-Accept header.
+    #[cfg(feature = "websocket")]
+    pub fn websocket<F>(websocket_key: &str, handler: F) -> Self
+    where
+        F: Fn(
+                crate::websocket::WebSocket,
+            ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        const WEBSOCKET_GUID: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+        let mut hasher = Sha1::new();
+        hasher.update(websocket_key.as_bytes());
+        hasher.update(WEBSOCKET_GUID.as_bytes());
+        let hash = hasher.finalize();
+        let accept_key = general_purpose::STANDARD.encode(&hash);
+
+        let mut res = Response::new(Full::new(Bytes::new()));
+        *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
+
+        let headers = res.headers_mut();
+        headers.insert(
+            header::UPGRADE,
+            header::HeaderValue::from_static("websocket"),
+        );
+        headers.insert(
+            header::CONNECTION,
+            header::HeaderValue::from_static("Upgrade"),
+        );
+        headers.insert(
+            header::HeaderName::from_static("sec-websocket-accept"),
+            header::HeaderValue::from_str(&accept_key).unwrap(),
+        );
+
+        Self {
+            inner: res,
+            ws_callback: Some(std::sync::Arc::new(move |ws| Box::pin(handler(ws)))),
+        }
     }
 
     /// Get status code.
@@ -168,7 +252,11 @@ impl ResBuilder {
         }
 
         *res.headers_mut() = self.headers;
-        Res { inner: res }
+        Res {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// Build HTML response.
@@ -183,7 +271,11 @@ impl ResBuilder {
         }
 
         *res.headers_mut() = self.headers;
-        Res { inner: res }
+        Res {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 
     /// Build JSON response.
@@ -199,7 +291,11 @@ impl ResBuilder {
                 }
 
                 *res.headers_mut() = self.headers;
-                Res { inner: res }
+                Res {
+                    inner: res,
+                    #[cfg(feature = "websocket")]
+                    ws_callback: None,
+                }
             }
             Err(_) => Res::builder().status(500).text("Failed to serialize JSON"),
         }
@@ -210,7 +306,11 @@ impl ResBuilder {
         let mut res = Response::new(Full::new(bytes.into()));
         *res.status_mut() = self.status;
         *res.headers_mut() = self.headers;
-        Res { inner: res }
+        Res {
+            inner: res,
+            #[cfg(feature = "websocket")]
+            ws_callback: None,
+        }
     }
 }
 

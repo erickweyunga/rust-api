@@ -28,6 +28,9 @@ mod res;
 pub mod route;
 mod router;
 
+#[cfg(feature = "websocket")]
+pub mod websocket;
+
 pub use api::RustApi;
 pub use config::ServerConfig;
 pub use error::{Error, Result};
@@ -41,6 +44,9 @@ pub use req::Req;
 pub use res::{Res, ResBuilder};
 pub use route::Route;
 pub use router::Router;
+
+#[cfg(feature = "websocket")]
+pub use websocket::{CloseFrame, Message, WebSocket, WebSocketHandler, WebSocketUpgrade};
 
 /// Common types and traits.
 pub mod prelude {
