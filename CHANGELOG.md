@@ -37,9 +37,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error handling with custom error handlers
 - Response builders and helpers
 - Extension system for request-scoped data
-
-### Ecosystem
-- rust-api-cors: CORS middleware
-- rust-api-error-handlers: Error handling utilities
-- rust-api-helpers: Middleware composition helpers
-- rust-api-client: HTTP client with modern Hyper 1.0 APIs

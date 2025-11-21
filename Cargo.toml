@@ -1,16 +1,6 @@
 [workspace]
 members = [
-    ".",
-    "examples/hello-world",
-    "examples/state-management",
-    "examples/nested-routing",
-    "examples/form-handling",
-    "examples/middleware-test",
-    "examples/extensions-demo",
-    "examples/error-handlers",
-    "examples/per-route-middleware",
-    "examples/extractors-demo",
-    "rust-api-middleware/client",
+    "."
 ]
 resolver = "2"
 
@@ -30,7 +20,6 @@ readme = "README.md"
 rust-version = "1.85.0"
 exclude = [
     "examples/*",
-    "rust-api-middleware/*",
     "plan/*",
     "target/*",
     ".git/*",

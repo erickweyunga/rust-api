@@ -25,15 +25,6 @@ rust-api = "0.0.3"
 
 Lightweight core with a rich ecosystem. The framework provides essential features while the community builds specialized middleware and extensions.
 
-## Ecosystem
-
-Official middleware packages:
-
-- **rust-api-cors** - CORS middleware
-- **rust-api-error-handlers** - Error handling utilities
-- **rust-api-helpers** - Middleware composition helpers
-- **rust-api-client** - HTTP client with modern Hyper APIs
-
 ## Documentation
 
 Visit the examples directory for working demonstrations of all features.
