@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2024-11-22
+## [0.0.5] - 2024-11-22
 
 ### Changed
 - **API Improvement**: Renamed `.layer()` to `.attach()` for better developer experience
@@ -27,14 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic 404 handling for missing files
   - Manual MIME type control via `.header()`
   - Zero dependencies for MIME detection
-
-## [0.0.5] - 2024-11-21
-
-### 🚨 BREAKING CHANGES
-
-Complete framework redesign with mutation-based API for maximum flexibility.
-
-### Changed
 
 - **API Redesign**: All builder methods converted to mutation methods
   - `RustApi::new()` now returns mutable instance
