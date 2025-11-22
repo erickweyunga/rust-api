@@ -31,7 +31,7 @@ mod router;
 #[cfg(feature = "websocket")]
 pub mod websocket;
 
-pub use api::RustApi;
+pub use api::{RustApi, app, app_with_state};
 pub use config::ServerConfig;
 pub use error::{Error, Result};
 pub use error_handler::ErrorHandler;
@@ -53,6 +53,6 @@ pub mod prelude {
     pub use crate::extractors::{BodyBytes, Form, FromRequest, Headers, Json, Path, Query, State};
     pub use crate::{
         Error, ErrorHandler, Extensions, Handler, IntoRes, Middleware, Next, Req, Res, Result,
-        Route, Router, RustApi, from_fn, middleware,
+        Route, Router, RustApi, app, app_with_state, from_fn, middleware,
     };
 }

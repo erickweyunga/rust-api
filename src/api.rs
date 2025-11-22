@@ -550,6 +550,42 @@ where
     }
 }
 
+/// Create a new HTTP application.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_api::app;
+///
+/// let mut app = app();
+/// app.get("/", |_| async { "Hello" });
+/// ```
+pub fn app() -> RustApi {
+    RustApi::new()
+}
+
+/// Create an HTTP application with custom state.
+///
+/// State is shared across all handlers and accessed via the `State<S>` extractor.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_api::{app_with_state, State};
+///
+/// struct AppState {
+///     db: Database,
+/// }
+///
+/// let mut app = app_with_state(AppState { db });
+/// app.get("/", |State(state): State<AppState>| async move {
+///     // Access state.db
+/// });
+/// ```
+pub fn app_with_state<S: Send + Sync + 'static>(state: S) -> RustApi<S> {
+    RustApi::with_state(state)
+}
+
 async fn shutdown_signal() -> std::io::Result<()> {
     #[cfg(unix)]
     {
