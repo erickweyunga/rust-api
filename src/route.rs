@@ -23,10 +23,10 @@ impl<S: Send + Sync + 'static> Route<S> {
         }
     }
 
-    /// Add middleware to this route.
+    /// Use middleware for this route.
     ///
     /// Middleware is executed in registration order.
-    pub fn layer<M: Middleware<S>>(&mut self, middleware: M) {
+    pub fn r#use<M: Middleware<S>>(&mut self, middleware: M) {
         let mut mw = (*self.middlewares).clone();
         mw.push(Arc::new(middleware));
         self.middlewares = Arc::new(mw);

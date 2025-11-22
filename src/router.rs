@@ -76,10 +76,10 @@ impl<S: Send + Sync + 'static> Router<S> {
             .push((Method::PATCH, path.to_string(), handler.into_handler()));
     }
 
-    /// Add middleware to this router.
+    /// Use middleware for this router.
     ///
     /// Middleware applies to all routes in this router, including nested routers.
-    pub fn layer<M: Middleware<S>>(&mut self, middleware: M) {
+    pub fn r#use<M: Middleware<S>>(&mut self, middleware: M) {
         self.middlewares.push(Arc::new(middleware));
     }
 

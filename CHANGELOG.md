@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2024-11-22
 
+### Changed
+- **API Improvement**: Renamed `.layer()` to `.use()` for better developer experience
+  - `app.use(middleware)` - More intuitive, inspired by Express.js
+  - `router.use(middleware)` - Consistent across all APIs
+  - `route.use(middleware)` - Clear intent
+  - Breaking change: Update all `.layer()` calls to `.use()`
+
 ### Added
 - **WebSocket Support**: Full RFC 6455 compliant WebSocket implementation
   - `WebSocketUpgrade` extractor for handling upgrade requests
@@ -32,17 +39,17 @@ Complete framework redesign with mutation-based API for maximum flexibility.
 - **API Redesign**: All builder methods converted to mutation methods
   - `RustApi::new()` now returns mutable instance
   - `.get()`, `.post()`, `.put()`, `.delete()`, `.patch()` now mutate instead of returning `Self`
-  - `.layer()` now mutates instead of returning `Self`
+  - `.use()` now mutates instead of returning `Self` (was `.layer()`)
   - `.nest()` now mutates instead of returning `Self`
   - `.route()` now mutates instead of returning `Self`
   
 - **Router Redesign**: Router methods now mutate
   - `Router::get()`, `.post()`, etc. now take `&mut self`
-  - `Router::layer()` now takes `&mut self`
+  - `Router::use()` now takes `&mut self` (was `.layer()`)
   - `Router::nest()` now takes `&mut self`
   
 - **Route Redesign**: Route middleware now uses mutation
-  - `Route::layer()` now takes `&mut self`
+  - `Route::use()` now takes `&mut self` (was `.layer()`)
   
 - **Error Handler API**: Changed from builder to mutation
   - `RustApi::error_handler()` changed to `.set_error_handler(&mut self)`
@@ -84,11 +91,11 @@ let app = RustApi::new()
     .await?;
 ```
 
-#### After (v0.1.0 - Mutation API):
+#### After (v0.0.5 - Mutation API):
 
 ```rust
 let mut app = RustApi::new();
-app.layer(cors_middleware);
+app.use(cors_middleware);  // Changed from .layer() to .use()
 app.get("/", handler);
 app.post("/users", create_user);
 app.nest("/api", router);
@@ -106,7 +113,7 @@ let router = Router::new()
 // After
 let mut router = Router::new();
 router.get("/users", handler);
-router.layer(middleware);
+router.use(middleware);  // Changed from .layer() to .use()
 ```
 
 #### Route Changes:
@@ -118,7 +125,7 @@ let route = Route::get("/admin", handler)
 
 // After
 let mut route = Route::get("/admin", handler);
-route.layer(auth_middleware);
+route.use(auth_middleware);  // Changed from .layer() to .use()
 ```
 
 ---
@@ -135,7 +142,7 @@ route.layer(auth_middleware);
 - `When` conditional middleware helper (simplified from `ConditionalMiddleware`)
 
 ### Changed
-- Simplified `.layer()` API to accept `Middleware` trait directly
+- Simplified `.use()` API to accept `Middleware` trait directly (was `.layer()`)
 - Improved middleware ergonomics with cleaner patterns
 
 ### Fixed

@@ -1,9 +1,7 @@
 use rust_api::{Req, Res, RustApi};
 
 async fn serve_html(_req: Req) -> Res {
-    Res::file("examples/file-serving/static/index.html")
-        .await
-        .header("content-type", "text/html")
+    Res::file("examples/file-serving/static/index.html").await
 }
 
 #[tokio::main]
